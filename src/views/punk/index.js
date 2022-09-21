@@ -10,6 +10,7 @@ import {
 	Tbody,
 	Button,
 	Tag,
+	useToast,
 } from "@chakra-ui/react";
 import { useWeb3React } from "@web3-react/core";
 import RequestAccess from "../../components/request-access";
@@ -17,15 +18,65 @@ import PunkCard from "../../components/punk-card";
 import { usePlatziPunkData } from "../../hooks/usePlatziPunksData";
 import { useParams } from "react-router-dom";
 import Loading from "../../components/loading";
+import { useState } from "react";
+import usePlatziPunks from "../../hooks/usePlatziPunks";
 
 const Punk = () => {
-	const { active, account } = useWeb3React();
+	const { active, account, library } = useWeb3React();
 	const { tokenId } = useParams();
-	const { loading, punk } = usePlatziPunkData(tokenId);
-
+	const { loading, punk, update } = usePlatziPunkData(tokenId);
+	const platziPunks = usePlatziPunks();
+	const toast = useToast();
+	const [transfering, setTransfering] = useState(false);
 	if (!active) return <RequestAccess />;
 
 	if (loading) return <Loading />;
+
+	const transfer = () => {
+		setTransfering(true);
+		const address = prompt("Enter the address: ");
+		const isAddress = library.utils.isAddress(address);
+
+		if (!isAddress) {
+			toast({
+				title: "Invalid address",
+				description: "The address entered is not a valid Ethereum address",
+				status: "error",
+			});
+
+			setTransfering(false);
+		} else {
+			platziPunks.methods
+				.safeTransferFrom(account, address, punk.tokenId)
+				.send({
+					from: account,
+				})
+				.on("error", (e) => {
+					toast({
+						title: "Transaction failed",
+						description: e.message,
+						status: "error",
+					});
+					setTransfering(false);
+				})
+				.on("transactionHash", (txHash) => {
+					toast({
+						title: "Transaction sent",
+						description: txHash,
+						status: "info",
+					});
+				})
+				.on("receipt", () => {
+					toast({
+						title: "Transaction confirmed",
+						description: `Punk #${punk.tokenId} was transfered to ${address}`,
+						status: "success",
+					});
+					setTransfering(false);
+					update();
+				});
+		}
+	};
 
 	return (
 		<Stack
@@ -43,7 +94,13 @@ const Punk = () => {
 					image={punk.image}
 				/>
 				{account === punk.owner ? (
-					<Button colorScheme="green">Transferir</Button>
+					<Button
+						colorScheme="green"
+						onClick={transfer}
+						isLoading={transfering}
+					>
+						Transfer
+					</Button>
 				) : (
 					""
 				)}
@@ -66,8 +123,8 @@ const Punk = () => {
 				<Table size="sm" variant="simple">
 					<Thead>
 						<Tr>
-							<Th>Atributo</Th>
-							<Th>Valor</Th>
+							<Th>Attribute</Th>
+							<Th>Value</Th>
 						</Tr>
 					</Thead>
 					<Tbody>
