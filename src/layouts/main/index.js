@@ -14,25 +14,25 @@ import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import NavLink from "./nav-link";
 import Footer from "./footer";
 import WalletData from "./wallet-data";
-
-const Links = [
-	{
-		name: "Home",
-		to: "/",
-	},
-	{
-		name: "Punks",
-		to: "/punks",
-	},
-	{
-		name: "My Punks",
-		to: "/mypunks",
-	},
-];
+import { useWeb3React } from "@web3-react/core";
 
 const MainLayout = ({ children }) => {
 	const { isOpen, onOpen, onClose } = useDisclosure();
-
+	const { account, active } = useWeb3React();
+	const Links = [
+		{
+			name: "Home",
+			to: "/",
+		},
+		{
+			name: "Punks",
+			to: "/punks",
+		},
+		{
+			name: "My Punks",
+			to: active ? `/punks?address=${account}` : "/punks",
+		},
+	];
 	return (
 		<Flex minH="100vh" direction="column">
 			<Box
